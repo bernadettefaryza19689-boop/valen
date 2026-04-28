@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Minimal Store Pro</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #fafafa;
+}
+
+/* NAVBAR */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  background: white;
+  border-bottom: 1px solid #eee;
+}
+
+.navbar input {
+  width: 60%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* CART BUTTON */
+.cart-btn {
+  position: relative;
+  background: black;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cart-btn span {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: red;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 50%;
+}
+
+/* GRID */
+main {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+  gap: 15px;
+}
+
+/* CARD */
+.card {
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.card img {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.price {
+  font-weight: bold;
+  color: green;
+}
+
+button {
+  padding: 6px;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* CART */
+.cart {
+  position: fixed;
+  right: -340px;
+  top: 0;
+  width: 340px;
+  height: 100%;
+  background: white;
+  padding: 20px;
+  transition: .3s;
+  overflow-y: auto;
+  border-left: 1px solid #eee;
+}
+
+.cart.active {
+  right: 0;
+}
+
+/* LIST CART */
+li {
+  list-style: none;
+  padding: 8px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+/* MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  width: 300px;
+  border-radius: 10px;
+}
+</style>
+
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <h3>MinimalStore Pro</h3>
+  <input type="text" id="search" placeholder="Cari produk...">
+  <button class="cart-btn" onclick="toggleCart()">
+    🛒 <span id="cartCount">0</span>
+  </button>
+</div>
+
+<!-- PRODUCT -->
+<main id="products"></main>
+
+<!-- CART -->
+<div class="cart" id="cart">
+  <h3>Checkout</h3>
+
+  <input id="name" placeholder="Nama">
+  <input id="phone" placeholder="No HP">
+
+  <ul id="cartItems"></ul>
+
+  <p>Total: Rp <span id="total">0</span></p>
+
+  <button onclick="checkout()">Checkout</button>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h3>Invoice</h3>
+    <div id="invoice"></div>
+    <button onclick="closeModal()">Tutup</button>
+  </div>
+</div>
+
+<script>
+const products = [
+  {
+    name: "Kaos Wanita",
+    price: 120000,
+    img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBmi6kDZzR42FA9U21mgktkAazyxuEjAoDHw&s"
+  },
+  {
+    name: "Celana Jeans",
+    price: 200000,
+    img: "https://colorbox.co.id/cdn/shop/files/I-LPDKEY124G093_LT._BLUE_1_39699b7e-42f8-4da4-9d9d-2371bae87fff.jpg?v=1719920831"
+  },
+  {
+    name: "Oversized Hoodie",
+    price: 250000,
+    img: "https://down-id.img.susercontent.com/file/a058508e74474a0bc436cfb25d7d49fc"
+  },
+  {
+    name: "Tas Ransel",
+    price: 200000,
+    img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdf9eZUkRvMtsNIbzrKGcRe9GKiEhL5-gdIg&s"
+  },
+  {
+    name: "Sepatu",
+    price: 500000,
+    img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgXFEzdjl4kc-o9msKtjDHpg0Z6x2fpS1jqg&s"
+  },
+  {
+    name: "Sendal Crocs",
+    price: 600000,
+    img:"https://down-id.img.susercontent.com/file/c90fbdda2569e274a65a4053d09e2731"
+  },
+  {
+    name: "Cardigan",
+    price: 200000,
+    img: "https://img.lazcdn.com/g/p/c2a516c239e174836959ac820624f2a2.jpg_720x720q80.jpg"
+  }
+];
+
+let cart = [];
+
+// render produk
+function render(list = products){
+  const el = document.getElementById("products");
+  el.innerHTML = "";
+
+  list.forEach((p)=>{
+    el.innerHTML += `
+      <div class="card">
+        <img src="${p.img}">
+        <h4>${p.name}</h4>
+        <p class="price">Rp ${p.price.toLocaleString()}</p>
+        <button onclick='addToCart("${p.name}")'>Tambah</button>
+      </div>
+    `;
+  });
+}
+render();
+
+// add cart (PRO QTY SYSTEM)
+function addToCart(name){
+  const item = products.find(p => p.name === name);
+
+  const existing = cart.find(i => i.name === name);
+
+  if(existing){
+    existing.qty += 1;
+  } else {
+    cart.push({...item, qty:1});
+  }
+
+  update();
+}
+
+// minus
+function minus(i){
+  cart[i].qty--;
+  if(cart[i].qty <= 0) cart.splice(i,1);
+  update();
+}
+
+// plus
+function plus(i){
+  cart[i].qty++;
+  update();
+}
+
+// update cart
+function update(){
+  document.getElementById("cartCount").innerText =
+    cart.reduce((a,b)=>a+b.qty,0);
+
+  document.getElementById("cartItems").innerHTML =
+    cart.map((i,idx)=>`
+      <li style="display:flex; justify-content:space-between;">
+        <div>
+          ${i.name} x ${i.qty}
+        </div>
+        <div>
+          <button onclick="minus(${idx})">-</button>
+          <button onclick="plus(${idx})">+</button>
+        </div>
+      </li>
+    `).join("");
+
+  let total = cart.reduce((s,i)=>s + i.price*i.qty,0);
+
+  document.getElementById("total").innerText =
+    total.toLocaleString();
+}
+
+// toggle cart
+function toggleCart(){
+  document.getElementById("cart").classList.toggle("active");
+}
+
+// search
+document.getElementById("search").addEventListener("input", function(){
+  const val = this.value.toLowerCase();
+
+  const filtered = products.filter(p =>
+    p.name.toLowerCase().includes(val)
+  );
+
+  render(filtered);
+});
+
+// checkout
+function checkout(){
+  if(cart.length === 0) return alert("Kosong");
+
+  const name = document.getElementById("name").value;
+  const phone = document.getElementById("phone").value;
+
+  if(!name || !phone) return alert("Isi data");
+
+  let total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+
+  document.getElementById("invoice").innerHTML = `
+    <p><b>${name}</b></p>
+    <p>${phone}</p>
+    <hr>
+    ${cart.map(i=>`
+      <div>${i.name} x${i.qty}</div>
+    `).join("")}
+    <hr>
+    <p>Total: Rp ${total.toLocaleString()}</p>
+  `;
+
+  document.getElementById("modal").style.display="flex";
+
+  cart = [];
+  update();
+}
+
+// modal
+function closeModal(){
+  document.getElementById("modal").style.display="none";
+}
+</script>
+
+</body>
+</html>
